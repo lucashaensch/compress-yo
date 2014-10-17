@@ -1,0 +1,245 @@
+
+<html>
+<head>
+
+<style>
+.seq { font-family:Courier; font-size:8pt; }
+.table { font-family:Courier; font-size:8pt; border-style:solid; border-width:1px; border-color:rgb(220,220,200); }
+.tr_header { font-weight:bold }
+.tr_footer { font-weight:bold; color:rgb(0,0,128) }
+.tr_par   { background-color:rgb(255,255,255);}
+.tr_impar { background-color:rgb(225,225,225);}
+</style>
+
+<script type="text/javascript">
+
+var tamanho     = 10000;
+var alfabeto    = []
+var rle_n_seq   = 20;
+var rle_min_tam = 3; 
+var rle_max_tam = 20; 
+var rle_max_tam_padrao = 5; 
+var rle_seq     = [];       
+var lzw_n_seq   = 20;
+var lzw_min_tam = 3; 
+var lzw_max_tam = 20; 
+var lzw_seq     = [];       
+
+var rle_qtd        = [];
+var rle_tam_padrao = [];
+var lzw_qtd        = [];
+
+
+function iniciar()
+{
+  cria_alfabeto();
+}
+
+function gerar()
+{
+  cria_seq_rle();  
+  cria_seq_lzw();
+  var n_chars = preenche_elemento("text_seq");
+  preenche_tamanho("tamanho",n_chars);
+  preenche_info();
+}
+
+function cria_alfabeto()
+{
+  var k = 0;
+  for (i=0; i<26; i++,k++)
+    alfabeto[k] = String.fromCharCode(65+i);
+  for (i=0; i<26; i++,k++)
+    alfabeto[k] = String.fromCharCode(97+i);
+  for (i=0; i<10; i++,k++)
+    alfabeto[k] = String.fromCharCode(48+i);
+  console.log('alfabeto:');
+  console.log(alfabeto);
+}
+
+function cria_seq_rle()
+{ 
+  for (i=0; i<rle_n_seq; i++)
+  {
+
+    var tam_padrao = 1+Math.floor(Math.random()*rle_max_tam_padrao);
+    var padrao = '';
+    for (j=0; j<tam_padrao; j++)
+    {
+      var char = alfabeto[Math.floor(Math.random()*alfabeto.length)];
+      padrao += char;
+    }
+    var qtd = rle_min_tam+Math.floor(Math.random()*(rle_max_tam-rle_min_tam+1));
+    rle_seq[i] = '';
+    for (j=0; j<qtd; j++)
+      rle_seq[i] += padrao;
+    rle_qtd[i]=0; 
+    rle_tam_padrao[i]=tam_padrao; 
+  }
+  console.log('rle_seq:');
+  console.log(rle_seq);
+}
+
+function cria_seq_lzw()
+{ 
+  for (i=0; i<lzw_n_seq; i++)
+  {
+    var qtd  = lzw_min_tam+Math.floor(Math.random()*(lzw_max_tam-lzw_min_tam+1));
+    lzw_seq[i] = '';
+    for (j=0; j<qtd; j++)
+    {
+      var char = alfabeto[Math.floor(Math.random()*alfabeto.length)];
+      lzw_seq[i] += char; 
+    }
+    lzw_qtd[i]=0; 
+  }
+  console.log('lzw_seq:');
+  console.log(lzw_seq);
+}
+
+function preenche_elemento(id)
+{
+  var el = window.document.getElementById(id);
+  if (!el)
+    return 0;
+  el.value = '';
+  while (el.value.length < tamanho)
+  {
+    var rle = Math.floor(Math.random()*2);
+    var n;
+    if (rle)
+    { 
+      n = Math.floor(Math.random()*rle_seq.length);
+      el.value += rle_seq[n];
+      rle_qtd[n] += 1;
+    }
+    else     
+    {
+      n = Math.floor(Math.random()*lzw_seq.length);
+      el.value += lzw_seq[n];
+      lzw_qtd[n] += 1;
+    } 
+  }
+  return el.value.length;
+}
+
+function preenche_tamanho(id,n_chars)
+{
+  var el = window.document.getElementById(id);
+  if (!el)
+    return;
+  el.innerHTML = "Tamanho total: "+ n_chars + " bytes";
+}
+
+function preenche_info()
+{
+  var html =
+   '<table class="table">'+
+     '<tr class="tr_header">'+
+       '<td>Sequ&ecirc;ncia RLE</td>'+
+       '<td>Padr&atilde;o</td>'+
+       '<td>Repeti&ccedil;&otilde;es</td>'+
+       '<td>Tamanho (bytes)</td>'+
+       '<td>Ocorr&ecirc;ncias</td>'+
+       '<td>S&iacute;mbolo</td>'+
+       '<td>Novo tamanho (bytes)</td>'+
+       '<td>Tamanho total (bytes)</td>'+
+       '<td>Tamanho comprimido (bytes)</td>'+
+     '</tr>';
+
+  var bytes_original = 0;
+  var bytes_comprimido = 0;
+
+  for (i=0; i<rle_n_seq; i++)
+  {
+    var padrao  = rle_seq[i].substring(0,rle_tam_padrao[i]);
+    var repet   = rle_seq[i].length / padrao.length;
+    var simbolo = '['+repet+'_'+padrao+']';
+    html +=
+     '<tr class="tr_'+(i%2?'par':'impar')+'">'+
+       '<td>'+rle_seq[i]+'</td>'+
+       '<td>'+padrao+'</td>'+
+       '<td>'+repet+'</td>'+
+       '<td>'+rle_seq[i].length+'</td>'+
+       '<td>'+rle_qtd[i]+'</td>'+
+       '<td>'+simbolo+'</td>'+
+       '<td>'+simbolo.length+'</td>'+
+       '<td>'+rle_seq[i].length*rle_qtd[i]+'</td>'+
+       '<td>'+simbolo.length*rle_qtd[i]+'</td>'+
+     '</tr>';
+    bytes_original += rle_seq[i].length*rle_qtd[i];
+    bytes_comprimido += simbolo.length*rle_qtd[i];
+  }
+  html +=
+    '<tr class="tr_footer">'+
+      '<td colspan="6"></td>'+
+      '<td>Total ==> </td>'+
+      '<td>'+bytes_original+'</td>'+
+      '<td>'+bytes_comprimido+'</td>'+
+    '</tr>'+
+   '</table>';
+
+
+  html +=
+   '<table class="table">'+
+     '<tr class="tr_header">'+
+       '<td>Sequ&ecirc;ncia LZW</td>'+
+       '<td>Tamanho (bytes)</td>'+
+       '<td>Ocorr&ecirc;ncias</td>'+
+       '<td>S&iacute;mbolo</td>'+
+       '<td>Novo tamanho (bytes)</td>'+
+       '<td>Tamanho total (bytes)</td>'+
+       '<td>Tamanho comprimido (bytes)</td>'+
+     '</tr>';
+
+  bytes_original = 0;
+  bytes_comprimido = 0;
+  var dicionario = '';  
+
+  for (i=0; i<lzw_n_seq; i++)
+  {
+    var simbolo = '('+(i)+')';
+    html +=
+     '<tr class="tr_'+(i%2?'par':'impar')+'">'+
+       '<td>'+lzw_seq[i]+'</td>'+
+       '<td>'+lzw_seq[i].length+'</td>'+
+       '<td>'+lzw_qtd[i]+'</td>'+
+       '<td>'+simbolo+'</td>'+
+       '<td>'+simbolo.length+'</td>'+
+       '<td>'+lzw_seq[i].length*lzw_qtd[i]+'</td>'+
+       '<td>'+simbolo.length*lzw_qtd[i]+'</td>'+
+     '</tr>';
+    bytes_original += lzw_seq[i].length*lzw_qtd[i];
+    bytes_comprimido += simbolo.length*lzw_qtd[i];
+    dicionario += (i==0?'{':' ')+lzw_seq[i];
+  }
+  dicionario += '}';
+  html +=
+    '<tr class="tr_footer">'+
+      '<td colspan="4"></td>'+
+      '<td>Total ==> </td>'+
+      '<td>'+bytes_original+'</td>'+
+      '<td>'+bytes_comprimido+'</td>'+
+     '</tr>'+
+     '<tr class="tr_footer">'+
+      '<td colspan="6">Dicion&aacute;rio: '+dicionario+'</td>'+
+      '<td>'+dicionario.length+'</td>'+
+     '</tr>'+
+   '</table>';
+
+
+  window.document.getElementById("info").innerHTML = html;        
+}
+
+</script>
+</head>
+<body onload=iniciar()>
+<textarea id="text_seq" class="seq" cols="100" rows="20" value="">
+</textarea>
+<br> 
+<input type="button" value="Gerar Sequ&ecirc;ncia" onclick="gerar()">
+&nbsp;&nbsp;
+<span id="tamanho"></span>
+<br>
+<div id="info"></div>
+</body>
